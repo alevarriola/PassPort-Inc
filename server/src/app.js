@@ -3,23 +3,29 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const { prisma } = require('./db');
-const authRoutes = require('./routes/auth.routes');
+const authRoutes = require('./routes/auth');
+const usersRoutes = require('./routes/users');
 
-
+// Configura la app
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-
+// Middlewares
 app.use(express.json());
 app.use(cookieParser());
+
+// CORS - Ajustar según el front
 app.use(cors({
     origin: 'http://localhost:5173', // Ajustar en el front si cambia
     credentials: true
 }));
+
+// Rutas
 app.use('/auth', authRoutes);
+app.use('/users', usersRoutes);
 
 
-// Healthcheck mínimo
+// Ruta de salud (health check)
 app.get('/health', async (req, res) => {
     try {
         await prisma.$queryRaw`SELECT 1;`;
@@ -29,7 +35,7 @@ app.get('/health', async (req, res) => {
     }
 });
 
-
+// Inicia el servidor
 app.listen(PORT, () => {
     console.log(`API running on http://localhost:${PORT}`);
 });
