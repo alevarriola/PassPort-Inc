@@ -1,0 +1,111 @@
+/* ====== Font (opcional, ver index.html) ====== */
+:root {
+--font: "Inter", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial;
+
+
+/* Paleta (ajustá a tu marca/pingüino) */
+--bg: #0b1020; /* fondo base */
+--bg-2: #0e1530; /* degradé */
+--surface: #11162a; /* tarjeta */
+--elev: #0f1426; /* elevación */
+--text: #e7ecff; /* texto principal */
+--muted: #b7c1ff; /* texto secundario */
+--primary: #4f7cff; /* acción */
+--primary-600: #3c66f2; /* hover */
+--danger: #ef4444; /* borrar */
+--ok: #10b981; /* ok */
+--border: #273056; /* bordes */
+--ring: rgba(79,124,255,.35);
+
+
+--radius: 14px;
+--shadow: 0 18px 50px rgba(0,0,0,.35);
+
+
+/* Escala de espacios */
+--s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px; --s6: 24px; --s8: 32px; --s10: 40px;
+}
+
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+margin: 0;
+font-family: var(--font);
+color: var(--text);
+background: radial-gradient(1200px 600px at 10% -10%, var(--bg-2) 0%, var(--bg) 60%);
+-webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+}
+
+
+/* ====== Helpers ====== */
+.container { max-width: 1120px; margin: 0 auto; padding: var(--s6); }
+.stack { display: grid; gap: var(--s4); }
+.stack-lg { display: grid; gap: var(--s6); }
+.row { display: flex; align-items: center; gap: var(--s4); }
+.space-between { display: flex; align-items: center; justify-content: space-between; }
+.centered { min-height: calc(100vh - 56px); display: grid; place-items: center; padding: var(--s8); }
+
+
+
+.card {
+background: linear-gradient(180deg, var(--surface), var(--elev));
+border: 1px solid var(--border);
+border-radius: var(--radius);
+box-shadow: var(--shadow);
+padding: var(--s8);
+}
+
+
+.heading-xl { font-size: 28px; font-weight: 800; margin: 0 0 var(--s3); letter-spacing: .2px; }
+.heading { font-size: 22px; font-weight: 700; margin: 0 0 var(--s3); }
+.muted { color: var(--muted); font-size: 13px; }
+
+
+/* ====== Form ====== */
+.label { display: block; font-size: 13px; color: var(--muted); margin-bottom: var(--s2); }
+.input, .select {
+width: 100%; height: 44px;
+padding: 0 var(--s4);
+background: #0b1126; color: var(--text);
+border: 1px solid var(--border); border-radius: 10px;
+outline: none; transition: box-shadow .15s, border-color .15s;
+}
+.input:focus, .select:focus { box-shadow: 0 0 0 4px var(--ring); border-color: var(--primary); }
+
+
+/* ====== Buttons ====== */
+.btn { border: 1px solid var(--border); background: #161c38; color: var(--text);
+border-radius: 12px; padding: 12px 16px; font-weight: 700; cursor: pointer; transition: background .2s, transform .03s; }
+.btn:active { transform: translateY(1px); }
+.btn--primary { background: var(--primary); border-color: var(--primary-600); color: white; }
+.btn--primary:hover { background: var(--primary-600); }
+.btn--ghost { background: transparent; }
+.btn--danger { background: #2a1020; border-color: #5d2440; color: #ffd7df; }
+
+
+/* ====== Table ====== */
+.table { width: 100%; border-collapse: collapse; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.table thead th { text-align: left; padding: var(--s4) var(--s5); color: var(--muted); background: #0f1530; font-weight: 600; }
+.table tbody td { padding: var(--s4) var(--s5); border-top: 1px solid #1e274d; }
+.table tbody tr:hover { background: #0e1634; }
+
+
+/* ====== Navbar ====== */
+.navbar { position: sticky; top: 0; z-index: 10; background: linear-gradient(180deg, #0f1530, #0c1228); border-bottom: 1px solid var(--border); backdrop-filter: blur(6px); }
+.navbar-inner { height: 56px; }
+.brand { font-weight: 800; letter-spacing: .2px; }
+.nav { display: flex; align-items: center; gap: var(--s4); }
+.link { color: var(--muted); padding: 8px 10px; border-radius: 10px; text-decoration: none; }
+.link:hover { background: #0e1634; color: var(--text); }
+
+
+/* ====== Auth page sizes ====== */
+.form-card { width: 100%; max-width: 460px; }
+
+
+/* Small screens */
+@media (max-width: 480px) {
+.heading-xl { font-size: 24px; }
+.form-card { max-width: 94vw; }
+}

@@ -1,7 +1,7 @@
 const express = require('express');
 const { z } = require('zod');
 const { prisma } = require('../db');
-const { isAuth, isAdmin, isSelfOrAdmin } = require('../middleware/auth');
+const { isAuth, isAdmin, isSelfOrAdmin } = require('../middlewares/auth');
 
 
 const router = express.Router();
