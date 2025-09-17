@@ -1,169 +1,47 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
-const { prisma } = require('../db');
-const { signJwt } = require('../utils/jwt');
 const { isAuth } = require('../middlewares/auth');
-
+const { registerSchema, loginSchema } = require('../validators/authValidators');
+const { register, login, logout, getMe } = require('../controllers/authController');
+const { loginAttempts, MAX_ATTEMPTS } = require('../helpers/loginAttempts');
 
 const router = express.Router();
 
-// Helper para setear la cookie
-function setAuthCookie(res, token) {
-    const cookieName = process.env.COOKIE_NAME || 'access_token';
-    const isProd = process.env.NODE_ENV === 'production';
-    // Setea la cookie
-    res.cookie(cookieName, token, {
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: isProd, // true en HTTPS/producción
-        maxAge: Number(process.env.JWT_EXPIRES_IN || 3600) * 1000,
-    });
-}
-
-
-// POST /auth/register (público, crea user normal)
-const { z } = require('zod');
-const registerSchema = z.object({
-    name: z.string().min(1).max(100).trim(),
-    email: z.string().email().max(100).trim(),
-    phone: z.string().min(5).max(20).trim(),
-    password: z.string().min(6).max(100),
-});
-
+// Registro
 router.post('/register', (req, res, next) => {
-    // Sanitiza y valida
     const result = registerSchema.safeParse(req.body);
     if (!result.success) {
         return res.status(400).json({ error: 'Invalid input', details: result.error.errors });
     }
     req.body = result.data;
     next();
-}, async (req, res) => {
-    try {
-        // Valida campos
-        const { name, email, phone, password } = req.body;
-        if (!name || !email || !phone || !password) {
-            return res.status(400).json({ error: 'Missing fields' });
-            }
+}, register);
 
-        // Verifica si el email ya está en uso
-        const exists = await prisma.user.findUnique({ where: { email } });
-        if (exists) return res.status(409).json({ error: 'Email already in use' });
-
-        // Hashea la contraseña
-        const passwordHash = await bcrypt.hash(password, 10);
-
-        // Crea el usuario
-        const user = await prisma.user.create({
-            data: { name, email, phone, passwordHash, role: 'USER' },
-            select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true },
-        });
-
-
-        return res.status(201).json(user);
-
-    } 
-    catch (e) {
-        console.error(e);
-        return res.status(500).json({ error: 'Internal error' });
-    }
-});
-
-
-// POST /auth/login
-// Limita intentos de login por IP
-const loginAttempts = {};
-const MAX_ATTEMPTS = 5;
-const BLOCK_TIME = 10 * 60 * 1000; // 10 minutos
-
-const loginSchema = z.object({
-    email: z.string().email().max(100).trim(),
-    password: z.string().min(6).max(100),
-});
-
+// Login con protección contra fuerza bruta
 router.post('/login', (req, res, next) => {
-    // Limita intentos por IP
     const ip = req.ip;
     const now = Date.now();
+
+    // Inicializa el seguimiento de intentos si no existe
     if (!loginAttempts[ip]) loginAttempts[ip] = { count: 0, blockedUntil: 0 };
     if (loginAttempts[ip].blockedUntil > now) {
         return res.status(429).json({ error: 'Too many login attempts. Try again later.' });
     }
-    // Sanitiza y valida
+
+    // Valida la entrada
     const result = loginSchema.safeParse(req.body);
     if (!result.success) {
         return res.status(400).json({ error: 'Invalid input', details: result.error.errors });
     }
+
+    // Pasa los datos validados al controlador
     req.body = result.data;
     next();
-}, async (req, res) => {
-    try {
-        // Valida campos
-        const { email, password } = req.body;
-        if (!email || !password) return res.status(400).json({ error: 'Missing fields' });
+}, login);
 
-        // Busca el usuario
-        const user = await prisma.user.findUnique({ where: { email } });
-        if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+// Logout
+router.post('/logout', logout);
 
-
-        // Verifica la contraseña
-        const ok = await bcrypt.compare(password, user.passwordHash);
-        const ip = req.ip;
-        if (!ok) {
-            loginAttempts[ip].count++;
-            if (loginAttempts[ip].count >= MAX_ATTEMPTS) {
-                loginAttempts[ip].blockedUntil = Date.now() + BLOCK_TIME;
-                loginAttempts[ip].count = 0;
-            }
-            return res.status(401).json({ error: 'Invalid credentials' });
-        } else {
-            loginAttempts[ip].count = 0;
-        }
-
-        // Crea el JWT y setea la cookie
-        const token = signJwt({ id: user.id, role: user.role });
-        setAuthCookie(res, token);
-
-        // Retorna datos del user (sin passwordHash)
-        return res.json({
-            user: { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role },
-        });
-    } 
-    catch (e) {
-        console.error(e);
-        return res.status(500).json({ error: 'Internal error' });
-    }
-});
-
-
-// POST /auth/logout
-router.post('/logout', (req, res) => {
-    // Borra la cookie
-    const cookieName = process.env.COOKIE_NAME || 'access_token';
-    res.clearCookie(cookieName, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' });
-    res.json({ ok: true });
-});
-
-
-// GET /auth/me
-router.get('/me', isAuth, async (req, res) => {
-    try {
-        // Busca el usuario por ID
-        const user = await prisma.user.findUnique({
-            where: { id: req.user.id },
-            select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true },
-        });
-
-        // Si no existe, error
-        if (!user) return res.status(404).json({ error: 'User not found' });
-        res.json({ user });
-    } 
-    catch (e) {
-        console.error(e);
-        res.status(500).json({ error: 'Internal error' });
-    }
-});
-
+// Obtener datos del usuario autenticado
+router.get('/me', isAuth, getMe);
 
 module.exports = router;
