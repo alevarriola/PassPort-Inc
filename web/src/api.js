@@ -1,9 +1,31 @@
+
 import axios from 'axios';
 
 // Configura la instancia de axios
 export const api = axios.create({
     baseURL: 'http://localhost:4000',
     withCredentials: true, // importante para enviar/recibir la cookie HTTP-only
+});
+
+// CSRF token cache
+let csrfToken = null;
+
+// Obtiene el token CSRF del backend
+export async function fetchCsrfToken() {
+    if (!csrfToken) {
+        const { data } = await api.get('/csrf-token');
+        csrfToken = data.csrfToken;
+    }
+    return csrfToken;
+}
+
+// Interceptor para agregar el token CSRF en solicitudes mutadoras
+api.interceptors.request.use(async (config) => {
+    if (["post", "put", "delete"].includes(config.method)) {
+        if (!csrfToken) await fetchCsrfToken();
+        config.headers['X-CSRF-Token'] = csrfToken;
+    }
+    return config;
 });
 
 // Auth

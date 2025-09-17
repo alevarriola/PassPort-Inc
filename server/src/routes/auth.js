@@ -22,7 +22,23 @@ function setAuthCookie(res, token) {
 
 
 // POST /auth/register (público, crea user normal)
-router.post('/register', async (req, res) => {
+const { z } = require('zod');
+const registerSchema = z.object({
+    name: z.string().min(1).max(100).trim(),
+    email: z.string().email().max(100).trim(),
+    phone: z.string().min(5).max(20).trim(),
+    password: z.string().min(6).max(100),
+});
+
+router.post('/register', (req, res, next) => {
+    // Sanitiza y valida
+    const result = registerSchema.safeParse(req.body);
+    if (!result.success) {
+        return res.status(400).json({ error: 'Invalid input', details: result.error.errors });
+    }
+    req.body = result.data;
+    next();
+}, async (req, res) => {
     try {
         // Valida campos
         const { name, email, phone, password } = req.body;
@@ -55,7 +71,32 @@ router.post('/register', async (req, res) => {
 
 
 // POST /auth/login
-router.post('/login', async (req, res) => {
+// Limita intentos de login por IP
+const loginAttempts = {};
+const MAX_ATTEMPTS = 5;
+const BLOCK_TIME = 10 * 60 * 1000; // 10 minutos
+
+const loginSchema = z.object({
+    email: z.string().email().max(100).trim(),
+    password: z.string().min(6).max(100),
+});
+
+router.post('/login', (req, res, next) => {
+    // Limita intentos por IP
+    const ip = req.ip;
+    const now = Date.now();
+    if (!loginAttempts[ip]) loginAttempts[ip] = { count: 0, blockedUntil: 0 };
+    if (loginAttempts[ip].blockedUntil > now) {
+        return res.status(429).json({ error: 'Too many login attempts. Try again later.' });
+    }
+    // Sanitiza y valida
+    const result = loginSchema.safeParse(req.body);
+    if (!result.success) {
+        return res.status(400).json({ error: 'Invalid input', details: result.error.errors });
+    }
+    req.body = result.data;
+    next();
+}, async (req, res) => {
     try {
         // Valida campos
         const { email, password } = req.body;
@@ -65,9 +106,20 @@ router.post('/login', async (req, res) => {
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user) return res.status(401).json({ error: 'Invalid credentials' });
 
+
         // Verifica la contraseña
         const ok = await bcrypt.compare(password, user.passwordHash);
-        if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+        const ip = req.ip;
+        if (!ok) {
+            loginAttempts[ip].count++;
+            if (loginAttempts[ip].count >= MAX_ATTEMPTS) {
+                loginAttempts[ip].blockedUntil = Date.now() + BLOCK_TIME;
+                loginAttempts[ip].count = 0;
+            }
+            return res.status(401).json({ error: 'Invalid credentials' });
+        } else {
+            loginAttempts[ip].count = 0;
+        }
 
         // Crea el JWT y setea la cookie
         const token = signJwt({ id: user.id, role: user.role });

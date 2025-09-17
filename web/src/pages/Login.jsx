@@ -19,13 +19,18 @@ export default function Login() {
         setLoading(true);
         setError('');
         try {
-        const u = await login(email, password);
-        if (u.role === 'ADMIN') nav('/admin');
-        else nav('/profile');
+            const u = await login(email, password);
+            if (u.role === 'ADMIN') nav('/admin');
+            else nav('/profile');
         } catch (e) {
-        setError('Credenciales inválidas');
+            // Si el backend responde con bloqueo
+            if (e?.response?.status === 429) {
+                setError('Demasiados intentos fallidos. Tu sesión está bloqueada por 10 minutos.');
+            } else {
+                setError('Credenciales inválidas');
+            }
         } finally {
-        setLoading(false);
+            setLoading(false);
         }
     }
 

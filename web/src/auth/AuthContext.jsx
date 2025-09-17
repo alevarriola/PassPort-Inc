@@ -33,8 +33,21 @@ export function AuthProvider({ children }) {
 
 
         async function logout() {
-            await apiLogout();
-            setUser(null);
+            try {
+                // Refresca el token CSRF antes de logout
+                if (typeof window !== 'undefined' && window.localStorage) {
+                    // Limpia el token CSRF cache si existe
+                    if (window.csrfToken) window.csrfToken = null;
+                }
+                if (typeof fetchCsrfToken === 'function') {
+                    try { await import('../api').then(m => m.fetchCsrfToken()); } catch {}
+                }
+                await apiLogout();
+            } catch (e) {
+                // Si la API falla, igual limpia el usuario
+            } finally {
+                setUser(null);
+            }
         }
 
 

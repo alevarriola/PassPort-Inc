@@ -93,7 +93,7 @@ border-radius: 12px; padding: 12px 16px; font-weight: 700; cursor: pointer; tran
 
 /* ====== Navbar ====== */
 .navbar { position: sticky; top: 0; z-index: 10; background: linear-gradient(180deg, #0f1530, #0c1228); border-bottom: 1px solid var(--border); backdrop-filter: blur(6px); }
-.navbar-inner { height: 56px; }
+.navbar-inner { height: 56px; display: flex; align-items: center; justify-content: space-between; }
 .brand { font-weight: 800; letter-spacing: .2px; }
 .nav { display: flex; align-items: center; gap: var(--s4); }
 .link { color: var(--muted); padding: 8px 10px; border-radius: 10px; text-decoration: none; }

@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const csurf = require('csurf');
 const { prisma } = require('./db');
 const authRoutes = require('./routes/auth');
 const usersRoutes = require('./routes/users');
@@ -11,14 +12,24 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 // Middlewares
+
 app.use(express.json());
 app.use(cookieParser());
+
+// CSRF protection (usa cookie para el token)
+app.use(csurf({ cookie: { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' } }));
 
 // CORS - Ajustar según el front
 app.use(cors({
     origin: 'http://localhost:5173', // Ajustar en el front si cambia
     credentials: true
 }));
+
+
+// Endpoint para obtener el token CSRF
+app.get('/csrf-token', (req, res) => {
+    res.json({ csrfToken: req.csrfToken() });
+});
 
 // Rutas
 app.use('/auth', authRoutes);
